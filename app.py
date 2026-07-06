@@ -2,6 +2,7 @@
 
 import json
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import streamlit as st
 import plotly.graph_objects as go
@@ -356,9 +357,13 @@ if st.button(
         )
     )
 
+    ist_time = datetime.now(
+        ZoneInfo("Asia/Kolkata")
+    )
+    
     s3.metric(
         "Generated",
-        datetime.now().strftime("%H:%M")
+        ist_time.strftime("%H:%M IST")
     )
 
     st.markdown("---")
