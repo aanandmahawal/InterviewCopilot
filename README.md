@@ -1,217 +1,362 @@
-# Competitor Intelligence Agent
+# Multi-Agent AI Resume & Interview Copilot
 
-An autonomous multi-agent research system that takes a company name or competitive question, searches the live web, extracts structured intelligence, critiques its own output, and produces a scored markdown report. Built because I wanted to understand what it actually takes to go beyond "prompt → response" and build something that measures its own quality.
+An AI-powered career assistant that analyzes resumes, evaluates ATS compatibility, compares candidates against job descriptions, generates interview questions, and provides personalized career guidance using a multi-agent architecture.
+
+Instead of relying on a single prompt-response interaction, this system uses multiple specialized AI agents coordinated through LangGraph. Each agent performs a dedicated task and passes structured outputs to the next stage, creating a recruiter-style evaluation workflow.
 
 ---
 
-## What it does differently
+## Overview
 
-Most agent demos generate a report and call it done. This one doesn't know if it did a good job unless it measures itself. Every report gets scored on four dimensions — factual grounding, topic coverage, contradiction detection, and claim confidence — and those scores are stored in SQLite so you can see quality trends over time.
+Most resume analyzers focus only on keyword matching or generate generic ATS scores. Recruiters, however, evaluate candidates across multiple dimensions including skills, projects, experience, role fit, and interview readiness.
 
-The other meaningful addition is the Critic→Synthesiser pattern. A first-draft report goes through an adversarial critic that looks for unsupported claims and missing perspectives, then a synthesiser resolves those gaps before the user sees anything. It's slower than a single-pass reporter, but the outputs are noticeably more honest.
+This project simulates that process through a multi-agent workflow that:
+
+- Analyzes resumes
+- Evaluates ATS compatibility
+- Matches resumes against job descriptions
+- Identifies strengths and skill gaps
+- Generates interview questions
+- Provides career recommendations
 
 ---
 
 ## Architecture
 
-```
-User Query
-    │
-    ▼
-┌─────────────────────────────────────────────┐
-│  Orchestrator                                │
-│  • Extract entities (company, industry)      │
-│  • Check FAISS memory for past research      │
-│  • Generate 4-5 focused sub-questions        │
-└──────────────┬──────────────────────────────┘
-               │
-               ▼
-┌─────────────────────────────────────────────┐
-│  Researcher                                  │
-│  • Tavily web search per sub-question        │
-│  • BeautifulSoup scraping                    │
-│  • Semantic dedup via FAISS                  │
-│  • LLM summarisation per page                │
-└──────────────┬──────────────────────────────┘
-               │
-               ▼
-┌─────────────────────────────────────────────┐
-│  Draft Reporter                              │
-│  • Assembles summaries into first draft      │
-│  • Structured sections (funding, product…)   │
-└──────────────┬──────────────────────────────┘
-               │
-               ▼
-┌─────────────────────────────────────────────┐
-│  Critic                                      │
-│  • Finds unsupported claims                  │
-│  • Flags missing perspectives                │
-│  • Detects source contradictions             │
-│  • Returns structured Critique object        │
-└──────────────┬──────────────────────────────┘
-               │
-               ▼
-┌─────────────────────────────────────────────┐
-│  Synthesiser                                 │
-│  • Merges draft + critique                   │
-│  • Adds [LOW CONFIDENCE] / [CONFLICTING]     │
-│  • Extracts structured Claim objects         │
-│  • Writes Known Unknowns section             │
-└──────────────┬──────────────────────────────┘
-               │
-               ▼
-┌─────────────────────────────────────────────┐
-│  Evaluator                                   │
-│  • Scores on 4 dimensions (0-100 each)       │
-│  • Saves report + scores to SQLite           │
-│  • Returns ReportScore Pydantic object       │
-└──────────────┬──────────────────────────────┘
-               │
-               ▼
-         Streamlit UI
-   (report + radar chart + claim colours)
+```text
+User Uploads Resume + Job Description
+                │
+                ▼
+          PDF Parser
+                │
+                ▼
+        LangGraph Workflow
+                │
+                ▼
+┌─────────────────────────────┐
+│ Resume Analyzer Agent       │
+└─────────────┬───────────────┘
+              │
+              ▼
+┌─────────────────────────────┐
+│ ATS Scorer Agent            │
+└─────────────┬───────────────┘
+              │
+              ▼
+┌─────────────────────────────┐
+│ JD Matcher Agent            │
+└─────────────┬───────────────┘
+              │
+              ▼
+┌─────────────────────────────┐
+│ Interview Generator Agent   │
+└─────────────┬───────────────┘
+              │
+              ▼
+┌─────────────────────────────┐
+│ Career Advisor Agent        │
+└─────────────┬───────────────┘
+              │
+              ▼
+          Streamlit UI
 ```
 
 ---
 
-## Tech stack
+## Agent Workflow
 
-| Component          | Tool                          |
-| ------------------ | ----------------------------- |
-| LLM                | Groq — Llama 3.3 70B          |
-| Agent framework    | LangGraph StateGraph          |
-| Web search         | Tavily API                    |
-| Web scraping       | Requests + BeautifulSoup4     |
-| Semantic memory    | FAISS + sentence-transformers |
-| Persistent history | SQLite (local file)           |
-| Output validation  | Pydantic v2                   |
-| UI                 | Streamlit                     |
+### Resume Analyzer Agent
+
+Acts as the first-level recruiter review.
+
+Responsibilities:
+
+- Extract technical skills
+- Identify projects and experience
+- Evaluate resume strengths
+- Highlight potential weaknesses
+- Generate structured resume insights
+
+Output:
+
+- Resume summary
+- Skills overview
+- Strengths and weaknesses
+- Project evaluation
 
 ---
 
-## Setup
+### ATS Scorer Agent
 
-**1. Clone and install**
+Simulates an Applicant Tracking System used by modern companies.
+
+Responsibilities:
+
+- Compare resume against the job description
+- Evaluate skill alignment
+- Evaluate project relevance
+- Assess experience and education fit
+- Identify missing keywords
+
+Scoring Logic:
+
+| Component | Weight |
+|------------|---------|
+| Technical Skills | 40% |
+| Projects | 25% |
+| Experience | 20% |
+| Education | 15% |
+
+Output:
+
+- Overall ATS Score
+- Technical Skills Score
+- Projects Score
+- Experience Score
+- Education Score
+- Matching Skills
+- Missing Skills
+- Recruiter Summary
+
+---
+
+### JD Matcher Agent
+
+Acts as a hiring manager evaluating role suitability.
+
+Responsibilities:
+
+- Compare candidate profile with role requirements
+- Measure overall job fit
+- Identify matching and missing skills
+- Highlight relevant projects
+- Provide suitability analysis
+
+Output:
+
+- Match Percentage
+- Relevant Skills
+- Skill Gaps
+- Relevant Projects
+- Hiring Recommendation
+
+---
+
+### Interview Generator Agent
+
+Acts as a technical interviewer.
+
+Responsibilities:
+
+Generate role-specific:
+
+- Technical Questions
+- Project-Based Questions
+- Behavioral Questions
+- HR Questions
+
+Questions are tailored using:
+
+- Candidate Resume
+- Job Description
+- Skills
+- Projects
+
+Output:
+
+- Personalized Interview Question Bank
+- Suggested Answers
+
+---
+
+### Career Advisor Agent
+
+Acts as an AI career mentor.
+
+Responsibilities:
+
+- Recommend suitable career paths
+- Identify skill gaps
+- Suggest certifications
+- Recommend future projects
+- Create a learning roadmap
+
+Output:
+
+- Suitable Roles
+- Skill Gap Analysis
+- Certification Recommendations
+- Project Suggestions
+- 3-Month Roadmap
+
+---
+
+## Key Features
+
+- Multi-Agent AI Workflow
+- LangGraph State Management
+- ATS Scoring Engine
+- Resume Intelligence
+- Job Description Matching
+- Interview Question Generation
+- Career Guidance System
+- Structured JSON Outputs
+- Interactive Dashboard
+- Recruiter-Style Evaluation
+- PDF Resume Parsing
+
+---
+
+## Tech Stack
+
+| Component | Technology |
+|------------|------------|
+| LLM | Groq Llama 3.3 70B |
+| Agent Framework | LangGraph |
+| LLM Orchestration | LangChain |
+| Frontend | Streamlit |
+| PDF Parsing | pdfplumber |
+| Visualization | Plotly |
+| State Management | LangGraph StateGraph |
+| Programming Language | Python |
+
+---
+
+## Project Structure
+
+```text
+InterviewCopilot/
+│
+├── agents/
+│   ├── resume_analyzer.py
+│   ├── ats_scorer.py
+│   ├── jd_matcher.py
+│   ├── interview_generator.py
+│   └── career_advisor.py
+│
+├── graph/
+│   ├── state.py
+│   └── interview_copilot_graph.py
+│
+├── utils/
+│   ├── llm.py
+│   └── parser.py
+│
+├── app.py
+├── requirements.txt
+├── README.md
+└── .env
+```
+
+---
+
+## Installation
+
+### Clone Repository
 
 ```bash
-git clone https://github.com/your-username/COMPETEIQ
-cd COMPETEIQ
+git clone <repository-url>
+cd InterviewCopilot
+```
+
+### Create Virtual Environment
+
+```bash
+python -m venv venv
+```
+
+### Activate Environment
+
+Windows:
+
+```bash
+venv\Scripts\activate
+```
+
+Linux/Mac:
+
+```bash
+source venv/bin/activate
+```
+
+### Install Dependencies
+
+```bash
 pip install -r requirements.txt
 ```
 
-**2. Configure keys** (both free, no card needed)
+---
 
-```bash
-cp .env.template .env
-# Fill in GROQ_API_KEY  → https://console.groq.com
-# Fill in TAVILY_API_KEY → https://tavily.com
+## Environment Variables
+
+Create a `.env` file:
+
+```env
+GROQ_API_KEY=your_groq_api_key
 ```
 
-**3. Run**
+Get your free API key from:
+
+https://console.groq.com
+
+---
+
+## Run Application
 
 ```bash
 streamlit run app.py
 ```
 
----
+Application launches at:
 
-## Running the benchmark
-
-```bash
-# Quick sanity check (5 questions, ~3 minutes)
-python -m evaluation.benchmark --quick 5
-
-# Full suite (20 questions, ~15 minutes)
-python -m evaluation.benchmark
-
-# Single question by ID
-python -m evaluation.benchmark --id 3
+```text
+http://localhost:8501
 ```
 
-Results save to `benchmark_results.json`. The table in this README was generated from a real run.
+---
+
+## Example Workflow
+
+1. Upload Resume (PDF)
+2. Paste Job Description
+3. Click Analyze Resume
+4. System Executes Multi-Agent Workflow
+5. View:
+
+- ATS Score
+- Resume Analysis
+- JD Match Report
+- Interview Questions
+- Career Advice
+
+6. Download Complete Report
 
 ---
 
-## Benchmark results
+## Future Improvements
 
-| Q   | Company    | Passed | Score | Sources | Time |
-| --- | ---------- | ------ | ----- | ------- | ---- |
-| 1   | Notion     | ✅     | 74    | 9       | 38s  |
-| 2   | Linear     | ✅     | 68    | 7       | 35s  |
-| 3   | Figma      | ✅     | 77    | 11      | 42s  |
-| 4   | Vercel     | ✅     | 65    | 8       | 36s  |
-| 5   | Stripe     | ✅     | 79    | 12      | 44s  |
-| 6   | Airtable   | ✅     | 66    | 7       | 33s  |
-| 7   | Databricks | ✅     | 71    | 10      | 40s  |
-| 8   | Slack      | ✅     | 70    | 9       | 39s  |
-| 9   | Canva      | ✅     | 73    | 10      | 38s  |
-| 10  | HubSpot    | ✅     | 69    | 8       | 37s  |
-| 11  | Loom       | ❌     | 55    | 5       | 31s  |
-| 12  | Intercom   | ✅     | 64    | 7       | 34s  |
-| 13  | Retool     | ❌     | 52    | 5       | 30s  |
-| 14  | Amplitude  | ✅     | 67    | 8       | 36s  |
-| 15  | Webflow    | ✅     | 68    | 8       | 35s  |
-| 16  | Brex       | ✅     | 63    | 7       | 34s  |
-| 17  | Cursor     | ✅     | 72    | 9       | 40s  |
-| 18  | Perplexity | ✅     | 75    | 10      | 41s  |
-| 19  | Monday.com | ✅     | 66    | 8       | 35s  |
-| 20  | Temporal   | ✅     | 60    | 6       | 32s  |
-
-**18/20 passed · Average score: 68/100**
-
-The two failures (Loom, Retool) are niche enough that Tavily's free tier returned fewer than 6 quality results. With a paid Tavily plan or an additional search source this would likely be 20/20.
+- Resume Chat Assistant
+- Multi-LLM Support (Groq + Gemini + OpenAI)
+- Resume Version Comparison
+- Vector Database Integration
+- Advanced RAG Pipeline
+- Interview Simulation Mode
+- PDF Report Generation
+- Job Recommendation Engine
 
 ---
 
-## Limitations
+## Why This Project?
 
-**Honest ones, not the disclaimer boilerplate kind:**
+This project demonstrates practical applications of:
 
-- Scores in the 60–75 range are the realistic ceiling for most queries on the free tier. The model is good but web coverage is the bottleneck.
-- The critic runs on the same LLM as the reporter, so it can miss the same blind spots. A proper adversarial setup would use a different model.
-- FAISS memory uses a local file. If two people run this simultaneously they'd overwrite each other's index. Fine for personal use, not for multi-user deployment.
-- Groq's free tier has rate limits (~30 req/min). The benchmark runner will hit these on full 20-question runs — add `time.sleep(2)` between questions if you see 429 errors.
-- Claims extraction relies on the synthesiser following the CLAIMS_JSON format. When it doesn't (maybe 10-15% of runs), the fallback extracts bullet points with LOW confidence, which drags the confidence score down.
+- Agentic AI
+- Generative AI
+- LangGraph
+- LLM Orchestration
+- Prompt Engineering
+- AI System Design
+- Resume Intelligence
+- Career Recommendation Systems
 
----
-
-## What I'd do next
-
-- **Multi-source search**: combine Tavily + Bing + Google Custom Search to get better coverage on niche companies
-- **Async scraping**: scrape all URLs in parallel instead of sequentially — would cut research time from ~40s to ~15s
-- **Different critic model**: use a model with different training data (e.g. Mistral vs Llama) for genuinely adversarial critique
-- **Structured output mode**: Groq supports JSON mode — switching to that would eliminate the CLAIMS_JSON parsing fragility
-- **User feedback loop**: let users flag wrong claims, store corrections, use them to improve prompts over time
-
----
-
-## Project structure
-
-```
-COMPETEIQ/
-├── app.py                        # Streamlit UI (4 tabs)
-├── agents/
-│   ├── orchestrator.py           # LangGraph graph + orchestrator/research nodes
-│   ├── researcher.py             # Web search, scraping, summarisation
-│   ├── critic.py                 # Adversarial draft reviewer
-│   ├── synthesiser.py            # Merge draft + critique → final report
-│   └── evaluator.py              # 4-dimension scoring + SQLite persistence
-├── domain/
-│   ├── schemas.py                # Pydantic models (Claim, Critique, ReportScore…)
-│   ├── prompts.py                # All LLM prompts in one place
-│   └── entities.py               # Entity extractor (company, industry, sub-questions)
-├── memory/
-│   ├── vector_store.py           # FAISS semantic dedup + session memory
-│   └── history_db.py             # SQLite research history
-├── evaluation/
-│   ├── scorer.py                 # Rule-based scorer (no LLM, used by benchmark)
-│   ├── benchmark.py              # Benchmark runner (python -m evaluation.benchmark)
-│   └── test_questions.json       # 20 test questions with expected keywords
-├── utils/
-│   ├── llm.py                    # Groq LLM singleton + retry wrapper
-│   ├── citation.py               # Citation formatting
-│   └── report.py                 # Report post-processing + filename helper
-├── .env.template
-├── requirements.txt
-└── README.md
-```
+It combines AI engineering, software engineering, and user-focused design into a production-style application that solves a real-world problem.
