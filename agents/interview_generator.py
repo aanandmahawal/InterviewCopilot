@@ -12,7 +12,7 @@ Act as a Senior Interviewer.
 Generate:
 
 ## Technical Questions
-3 questions
+5 questions
 
 ## Project Questions
 3 questions
