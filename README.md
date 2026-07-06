@@ -2,22 +2,22 @@
 
 An AI-powered career assistant that analyzes resumes, evaluates ATS compatibility, compares candidates against job descriptions, generates interview questions, and provides personalized career guidance using a multi-agent architecture.
 
-Instead of relying on a single prompt-response interaction, this system uses multiple specialized AI agents coordinated through LangGraph. Each agent performs a dedicated task and passes structured outputs to the next stage, creating a recruiter-style evaluation workflow.
+Unlike traditional resume analyzers that rely on a single prompt-response interaction, this system uses multiple specialized AI agents orchestrated through LangGraph. Each agent performs a dedicated task and passes structured outputs to the next stage, creating a recruiter-style evaluation workflow.
 
 ---
 
 ## Overview
 
-Most resume analyzers focus only on keyword matching or generate generic ATS scores. Recruiters, however, evaluate candidates across multiple dimensions including skills, projects, experience, role fit, and interview readiness.
+Most resume review tools focus only on keyword matching or generic ATS scores. Recruiters, however, evaluate candidates across multiple dimensions including technical skills, project relevance, experience, role fit, interview readiness, and career growth potential.
 
-This project simulates that process through a multi-agent workflow that:
+This project simulates that process using a multi-agent workflow that:
 
 - Analyzes resumes
 - Evaluates ATS compatibility
 - Matches resumes against job descriptions
 - Identifies strengths and skill gaps
 - Generates interview questions
-- Provides career recommendations
+- Provides personalized career guidance
 
 ---
 
@@ -67,36 +67,31 @@ User Uploads Resume + Job Description
 
 ### Resume Analyzer Agent
 
-Acts as the first-level recruiter review.
+Acts as the first-stage recruiter review.
 
 Responsibilities:
 
 - Extract technical skills
-- Identify projects and experience
-- Evaluate resume strengths
-- Highlight potential weaknesses
-- Generate structured resume insights
+- Analyze projects and experience
+- Identify strengths and weaknesses
+- Summarize resume quality
 
 Output:
 
-- Resume summary
-- Skills overview
-- Strengths and weaknesses
-- Project evaluation
+- Resume Analysis Report
 
 ---
 
 ### ATS Scorer Agent
 
-Simulates an Applicant Tracking System used by modern companies.
+Simulates an Applicant Tracking System.
 
 Responsibilities:
 
-- Compare resume against the job description
-- Evaluate skill alignment
-- Evaluate project relevance
-- Assess experience and education fit
-- Identify missing keywords
+- Compare resume with job description
+- Calculate ATS compatibility score
+- Identify matching and missing skills
+- Highlight strengths and improvement areas
 
 Scoring Logic:
 
@@ -109,35 +104,28 @@ Scoring Logic:
 
 Output:
 
-- Overall ATS Score
-- Technical Skills Score
-- Projects Score
-- Experience Score
-- Education Score
-- Matching Skills
-- Missing Skills
+- ATS Score
+- Skills Match Analysis
 - Recruiter Summary
 
 ---
 
 ### JD Matcher Agent
 
-Acts as a hiring manager evaluating role suitability.
+Acts as a hiring manager.
 
 Responsibilities:
 
-- Compare candidate profile with role requirements
-- Measure overall job fit
-- Identify matching and missing skills
-- Highlight relevant projects
-- Provide suitability analysis
+- Evaluate role suitability
+- Compare candidate profile against requirements
+- Identify project relevance
+- Assess skill alignment
 
 Output:
 
 - Match Percentage
 - Relevant Skills
 - Skill Gaps
-- Relevant Projects
 - Hiring Recommendation
 
 ---
@@ -148,24 +136,18 @@ Acts as a technical interviewer.
 
 Responsibilities:
 
-Generate role-specific:
+Generate:
 
 - Technical Questions
 - Project-Based Questions
 - Behavioral Questions
 - HR Questions
 
-Questions are tailored using:
-
-- Candidate Resume
-- Job Description
-- Skills
-- Projects
+Questions are customized using both the resume and job description.
 
 Output:
 
 - Personalized Interview Question Bank
-- Suggested Answers
 
 ---
 
@@ -175,19 +157,15 @@ Acts as an AI career mentor.
 
 Responsibilities:
 
-- Recommend suitable career paths
-- Identify skill gaps
-- Suggest certifications
-- Recommend future projects
-- Create a learning roadmap
+- Suggest suitable roles
+- Identify missing skills
+- Recommend certifications
+- Suggest future projects
+- Generate learning roadmap
 
 Output:
 
-- Suitable Roles
-- Skill Gap Analysis
-- Certification Recommendations
-- Project Suggestions
-- 3-Month Roadmap
+- Career Growth Plan
 
 ---
 
@@ -227,26 +205,74 @@ Output:
 ```text
 InterviewCopilot/
 │
+├── app.py
+│
 ├── agents/
 │   ├── resume_analyzer.py
+│   │   └── Extracts skills, projects, strengths and weaknesses
+│   │
 │   ├── ats_scorer.py
+│   │   └── Calculates ATS score and identifies skill gaps
+│   │
 │   ├── jd_matcher.py
+│   │   └── Evaluates candidate fit against the job description
+│   │
 │   ├── interview_generator.py
+│   │   └── Generates role-specific interview questions
+│   │
 │   └── career_advisor.py
+│       └── Creates career roadmap and recommendations
 │
 ├── graph/
 │   ├── state.py
+│   │   └── Shared state passed between all agents
+│   │
 │   └── interview_copilot_graph.py
+│       └── LangGraph workflow orchestration
 │
 ├── utils/
 │   ├── llm.py
+│   │   └── Groq LLM configuration, retries and JSON handling
+│   │
 │   └── parser.py
+│       └── PDF text extraction using pdfplumber
 │
-├── app.py
 ├── requirements.txt
 ├── README.md
 └── .env
 ```
+
+---
+
+## How It Works
+
+### Step 1 — Resume Upload
+
+User uploads a PDF resume.
+
+### Step 2 — Resume Parsing
+
+The PDF is parsed using pdfplumber and converted into plain text.
+
+### Step 3 — Agent Execution
+
+LangGraph orchestrates the workflow and sequentially executes all agents.
+
+### Step 4 — ATS Evaluation
+
+The ATS Agent compares the resume against the job description and calculates compatibility scores.
+
+### Step 5 — Interview Preparation
+
+Interview Agent generates role-specific interview questions.
+
+### Step 6 — Career Guidance
+
+Career Advisor Agent provides skill-gap analysis and roadmap recommendations.
+
+### Step 7 — Dashboard Generation
+
+Results are displayed through an interactive Streamlit dashboard.
 
 ---
 
@@ -317,32 +343,30 @@ http://localhost:8501
 
 ## Example Workflow
 
-1. Upload Resume (PDF)
+1. Upload Resume
 2. Paste Job Description
 3. Click Analyze Resume
-4. System Executes Multi-Agent Workflow
+4. LangGraph executes all agents
 5. View:
-
-- ATS Score
-- Resume Analysis
-- JD Match Report
-- Interview Questions
-- Career Advice
-
-6. Download Complete Report
+   - ATS Score
+   - Resume Analysis
+   - JD Match Report
+   - Interview Questions
+   - Career Advice
+6. Download Generated Report
 
 ---
 
 ## Future Improvements
 
 - Resume Chat Assistant
+- Mock Interview Agent
 - Multi-LLM Support (Groq + Gemini + OpenAI)
-- Resume Version Comparison
-- Vector Database Integration
 - Advanced RAG Pipeline
-- Interview Simulation Mode
+- Resume Version Comparison
 - PDF Report Generation
 - Job Recommendation Engine
+- Vector Database Integration
 
 ---
 
@@ -358,5 +382,6 @@ This project demonstrates practical applications of:
 - AI System Design
 - Resume Intelligence
 - Career Recommendation Systems
+- Multi-Agent Workflows
 
-It combines AI engineering, software engineering, and user-focused design into a production-style application that solves a real-world problem.
+The project combines AI engineering, software engineering, and user-focused design into a production-style application that solves a real-world problem for job seekers.
