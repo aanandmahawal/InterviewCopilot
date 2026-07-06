@@ -6,6 +6,7 @@ langchain-groq
 groq
 faiss-cpu
 pdfplumber
+pypdf
 python-dotenv
 plotly
 pandas
