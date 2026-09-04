@@ -22,9 +22,16 @@ if not GROQ_API_KEY:
 # =====================================
 # LLM CONFIG
 # =====================================
+# llama-3.3-70b-versatile was deprecated by Groq (June 2026) for
+# free/developer tiers. openai/gpt-oss-120b is Groq's recommended
+# replacement. Override without code changes by setting GROQ_MODEL
+# in .env if Groq deprecates this one too:
+#   GROQ_MODEL=qwen/qwen3.6-27b
+
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 
 llm = ChatGroq(
-    model="llama-3.3-70b-versatile",
+    model=GROQ_MODEL,
     api_key=GROQ_API_KEY,
     temperature=0.2,
 )
